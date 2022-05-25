@@ -4,10 +4,9 @@ GO
 
 ALTER PROCEDURE [dbo].[sp_ExtendedPropertyEditor]
     @Help TINYINT = 0,
-	@SchemaName VARCHAR (128) = 'dbo',
-	@ObjectName VARCHAR (128) = '',
-	@ParentName VARCHAR (256) = '',
-	@Description VARCHAR (2000) = ''
+	@PropertyName NVARCHAR(256) = 'MS_Description',
+	@PropertyValue NVARCHAR(MAX) = NULL,
+	@ObjectName VARCHAR (128) = NULL
 
 WITH RECOMPILE
 AS 
@@ -47,47 +46,47 @@ AS
 	*/
 	'
 	END /* End Help section */
-	ELSE IF @ObjectName = ''
+	ELSE IF @PropertyValue IS NULL
 	BEGIN
-SELECT 
-      Class
-	  ,Class_Desc
-	  ,major_id
-	  ,minor_id
-	  ,PropertyName
-	  ,PropertyValue
-	  ,ObjectName
-	  ,SchemaName
-	  ,ParentName
-FROM
-  (
-    Values
-        ( 0, 'DATABASE', 0, 0, 'MS_Description', '-EXAMPLE DATABASE DESCRIPTION-', '-EXAMPLE DATABASE NAME-', NULL, NULL  ),
-        ( 1, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
-        ( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
-        ( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
-        ( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
-		( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
-		( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
-		( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
-		( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
-		( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
-		( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
-		( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
-		( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
-		( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
-		( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
-		( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
-		( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
-		( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
-		( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  )
-  ) AS Examples ( Class, Class_Desc, major_id, minor_id, PropertyName, PropertyValue, ObjectName, SchemaName, ParentName )
+		SELECT 
+		       Class
+			  ,Class_Desc
+			  ,major_id
+			  ,minor_id
+			  ,PropertyName
+			  ,PropertyValue
+			  ,ObjectName
+			  ,SchemaName
+			  ,ParentName
+		FROM
+		  (
+		    Values
+		        ( 0, 'DATABASE', 0, 0, 'MS_Description', '-EXAMPLE DATABASE DESCRIPTION-', '-EXAMPLE DATABASE NAME-', NULL, NULL  ),
+		        ( 1, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
+		        ( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
+		        ( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
+		        ( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
+				( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
+				( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
+				( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
+				( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
+				( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
+				( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
+				( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
+				( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
+				( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
+				( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
+				( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
+				( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
+				( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
+				( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  )
+		  ) AS Examples ( Class, Class_Desc, major_id, minor_id, PropertyName, PropertyValue, ObjectName, SchemaName, ParentName )
 
 	SELECT 
 		Class				= ep.[class]
 		,Class_Desc			= ep.[class_desc]
-		,[major_id]
-		,[minor_id]
+		,ep.[major_id]
+		,ep.[minor_id]
 		,PropertyName		= ep.[name]
 		,PropertyValue		= ep.[Value]
 		,ObjectName			= CASE 
@@ -304,6 +303,8 @@ FROM
 	LEFT JOIN		/* Database File "Schema" aka DataSpace aka Filegroup */
 		sys.filegroups						dfg
 		ON df.[data_space_id] = dfg.[data_space_id]
+	WHERE 1=1
+		AND ep.[Name] = @PropertyName
 	ORDER BY 
 		ep.[class], ep.[Value]
 	END /* End Informational Section */
