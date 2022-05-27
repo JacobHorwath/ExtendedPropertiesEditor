@@ -1,12 +1,20 @@
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
 IF OBJECT_ID('dbo.sp_ExtendedPropertyEditor') IS NULL
   EXEC ('CREATE PROCEDURE dbo.sp_ExtendedPropertyEditor AS RETURN 0;');
 GO
 
 ALTER PROCEDURE [dbo].[sp_ExtendedPropertyEditor]
     @Help TINYINT = 0,
-	@PropertyName NVARCHAR(256) = 'MS_Description',
-	@PropertyValue NVARCHAR(MAX) = NULL,
-	@ObjectName VARCHAR (128) = NULL
+	@PropertyName NVARCHAR(256)		= NULL,
+	@PropertyValue NVARCHAR(MAX)	= NULL,
+	@ObjectType NVARCHAR (256)		= NULL,
+	@ObjectName NVARCHAR(256)		= NULL,
+	@SchemaName NVARCHAR(256)		= 'dbo',
+	@ParentName NVARCHAR(256)		= NULL
 
 WITH RECOMPILE
 AS 
@@ -46,96 +54,191 @@ AS
 	*/
 	'
 	END /* End Help section */
-	ELSE IF @PropertyValue IS NULL
+	ELSE IF (@PropertyValue IS NULL OR @ObjectType IS NULL OR @ObjectName IS NULL)
 	BEGIN
-		SELECT 
-		       Class
-			  ,Class_Desc
-			  ,major_id
-			  ,minor_id
-			  ,PropertyName
-			  ,PropertyValue
-			  ,ObjectName
-			  ,SchemaName
-			  ,ParentName
-		FROM
-		  (
-		    Values
-		        ( 0, 'DATABASE', 0, 0, 'MS_Description', '-EXAMPLE DATABASE DESCRIPTION-', '-EXAMPLE DATABASE NAME-', NULL, NULL  ),
-		        ( 1, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
-		        ( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
-		        ( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
-		        ( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
-				( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
-				( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
-				( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
-				( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
-				( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
-				( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
-				( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
-				( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
-				( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
-				( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
-				( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
-				( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
-				( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
-				( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  )
-		  ) AS Examples ( Class, Class_Desc, major_id, minor_id, PropertyName, PropertyValue, ObjectName, SchemaName, ParentName )
+		CREATE TABLE #Results (
+			ObjectType NVARCHAR(256) NOT NULL,
+			ObjectName NVARCHAR(256) NOT NULL,
+			SchemaName NVARCHAR(256) NULL,
+			ParentName NVARCHAR(256) NULL,
+			PropertyName NVARCHAR(256) NOT NULL,
+			PropertyValue SQL_VARIANT NOT NULL,
+			PrimaryIdColumn NVARCHAR(256) NOT NULL,
+			PrimaryId BIGINT NOT NULL,
+			SecondaryIdColumn NVARCHAR(256) NULL,
+			SecondaryId BIGINT NOT NULL
+			);
 
+		--SELECT 
+		--       Class
+		--	  ,Class_Desc
+		--	  ,major_id
+		--	  ,minor_id
+		--	  ,PropertyName
+		--	  ,PropertyValue
+		--	  ,ObjectName
+		--	  ,SchemaName
+		--	  ,ParentName
+		--FROM
+		--  (
+		--    Values
+		--        ( 0, 'DATABASE', 0, 0, 'MS_Description', '-EXAMPLE DATABASE DESCRIPTION-', '-EXAMPLE DATABASE NAME-', NULL, NULL  ),
+		--        ( 1, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
+		--        ( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
+		--        ( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
+		--        ( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
+		--		( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
+		--		( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
+		--		( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
+		--		( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
+		--		( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
+		--		( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
+		--		( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
+		--		( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
+		--		( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
+		--		( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
+		--		( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
+		--		( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
+		--		( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  ),
+		--		( 0, '', 0, 0, 'MS_Description', '-EXAMPLE DESCRIPTION-', '-EXAMPLENAME-', '-EXAMPLESCHEMANAME-', '-EXAMPLEPARENTNAME-'  )
+		--  ) AS Examples ( Class, Class_Desc, major_id, minor_id, PropertyName, PropertyValue, ObjectName, SchemaName, ParentName )
+
+	INSERT INTO #Results (
+		ObjectType,
+		SchemaName,
+		ParentName,
+		ObjectName,
+		PropertyName,
+		PropertyValue,
+		PrimaryIdColumn,
+		PrimaryId,
+		SecondaryIdColumn,
+		SecondaryId)
 	SELECT 
-		Class				= ep.[class]
-		,Class_Desc			= ep.[class_desc]
-		,ep.[major_id]
-		,ep.[minor_id]
-		,PropertyName		= ep.[name]
-		,PropertyValue		= ep.[Value]
-		,ObjectName			= CASE 
-								WHEN ep.[class] = 0												THEN DB_NAME()
-								WHEN (ep.[class] = 1 
-									 AND ep.[minor_id] = 0 
-									 AND o.[object_id] IS NULL)									THEN en.[Name] /* Ridiculous edge case for Event Notifications */
-								WHEN ep.[class] = 1	AND ep.[minor_id] = 0						THEN o.[Name]
-								WHEN ep.[class] = 1	AND ep.[minor_id] <> 0						THEN c.[Name]
-								WHEN ep.[class] = 2												THEN pr.[Name]
-								WHEN ep.[class] = 3												THEN sch.[Name]
-								WHEN ep.[class] = 4												THEN dp.[Name]
-								WHEN ep.[class] = 5												THEN a.[Name]
-								WHEN ep.[class] = 6												THEN t.[Name]
-								WHEN ep.[class] = 7												THEN i.[Name]
-								WHEN ep.[class] = 8												THEN tc.[Name]
-								WHEN ep.[class] = 10											THEN x.[Name]
-								WHEN ep.[class] = 15 											THEN smt.[Name] 
-								WHEN ep.[class] = 16											THEN sc.[Name]
-								WHEN ep.[class] = 17											THEN s.[Name]
-								WHEN ep.[class] = 18											THEN rsb.[Name]
-								WHEN ep.[class] = 19											THEN r.[Name]
-								WHEN ep.[class] = 20											THEN fg.[Name]
-								WHEN ep.[class] = 21											THEN pf.[Name]
-								WHEN ep.[class] = 22											THEN df.[Name]
-								WHEN ep.[class] = 27											THEN pg.[Name]
-								ELSE en.[Name]
-							 END COLLATE DATABASE_DEFAULT
-		--,ObjectType			= o.[type]
-		--,ObjectTypeDesc		= o.[type_desc]
-		,SchemaName	= CASE
-								WHEN ep.[class] = 1 AND o.[object_id] IS NOT NULL				THEN os.[Name]
-								WHEN ep.[class] = 1 AND ep.[minor_id] = 0						THEN pos.[Name]
-								WHEN ep.[class] = 1 AND ep.[minor_id] <> 0						THEN cpos.[Name]
-								WHEN ep.[class] = 2												THEN prs.[Name]
-								WHEN ep.[class] = 6												THEN ts.[Name]
-								WHEN ep.[class] = 7												THEN ips.[Name]
-								WHEN ep.[class] = 8												THEN tts.[Name]
-								WHEN ep.[class] = 10											THEN xs.[Name]
-								WHEN ep.[class] = 22											THEN dfg.[Name]
-								ELSE NULL
-							  END
-		,ParentName	= CASE
-								 WHEN ep.[class] = 1 AND ep.[minor_id] = 0						THEN po.[Name]
-								 WHEN ep.[class] = 1 AND ep.[minor_id] <> 0						THEN cpo.[Name]
-								 WHEN ep.[class] = 2											THEN pro.[Name]
-								 WHEN ep.[class] = 7											THEN ipo.[Name]
-								 ELSE NULL
-							  END
+		ObjectType				= CASE
+									WHEN ep.[class] = 0												THEN 'DATABASE'
+									WHEN ep.[class] = 1 AND o.[type] = 'AF'							THEN 'AGGREGATE'
+									WHEN ep.[class] = 1 AND o.[type] = 'D'							THEN 'CONSTRAINT'
+									WHEN ep.[class] = 1 AND o.[type] = 'FN'							THEN 'FUNCTION'
+									WHEN ep.[class] = 1 AND o.[type] = 'IT'							THEN 'TABLE' /* Probably won't work anyway but here we are */
+									WHEN ep.[class] = 1 AND o.[type] = 'P'							THEN 'PROCEDURE'
+									WHEN ep.[class] = 1 AND o.[type] = 'PK'							THEN 'CONSTRAINT'
+									WHEN ep.[class] = 1 AND o.[type] = 'R'							THEN 'RULE'
+									WHEN ep.[class] = 1 AND o.[type] = 'S'							THEN 'TABLE'
+									WHEN ep.[class] = 1 AND o.[type] = 'SQ'							THEN 'QUEUE'
+									WHEN ep.[class] = 1 AND o.[type] = 'SO'							THEN 'SEQUENCE'
+									WHEN ep.[class] = 1 AND o.[type] = 'SN'							THEN 'SYNONYM'
+									WHEN ep.[class] = 1 AND o.[type] = 'TR'							THEN 'TRIGGER'
+									WHEN ep.[class] = 1 AND o.[type] = 'TT'							THEN 'TYPE'
+									WHEN ep.[class] = 1 AND o.[type] = 'UQ'							THEN 'CONSTRAINT'
+									WHEN ep.[class] = 1 AND o.[type] = 'U'							THEN 'TABLE'
+									WHEN ep.[class] = 1 AND o.[type] = 'V'							THEN 'VIEW'
+									WHEN ep.[class] = 1 AND ep.[minor_id] > 0						THEN 'COLUMN'
+									WHEN ep.[class] = 1 AND o.[object_id] IS NULL					THEN 'EVENT NOTIFICATION' /* This foolish thing needs to go last in the series */
+									WHEN ep.[class] = 2												THEN 'PARAMETER'
+									WHEN ep.[class] = 3												THEN 'SCHEMA'
+									WHEN ep.[class] = 4												THEN 'USER'
+									WHEN ep.[class] = 5												THEN 'ASSEMBLY'
+									WHEN ep.[class] = 6												THEN 'TYPE'
+									WHEN ep.[class] = 7												THEN 'INDEX'
+									WHEN ep.[class] = 8												THEN 'COLUMN'
+									WHEN ep.[class] = 10											THEN 'XML SCHEMA COLLECTION'
+									WHEN ep.[class] = 15											THEN 'MESSAGE TYPE'
+									WHEN ep.[class] = 16											THEN 'CONTRACT'
+									WHEN ep.[class] = 17											THEN 'SERVICE'
+									WHEN ep.[class] = 18											THEN 'REMOTE SERVICE BINDING'
+									WHEN ep.[class] = 19											THEN 'ROUTE'
+									WHEN ep.[class] = 20											THEN 'FILEGROUP'
+									WHEN ep.[class] = 21											THEN 'PARTITION FUNCTION'
+									WHEN ep.[class] = 22											THEN 'LOGICAL FILE NAME'
+									WHEN ep.[class] = 27											THEN 'PLAN GUIDE'
+									ELSE NULL
+								 END
+		,SchemaName				= CASE
+									WHEN ep.[class] = 1 AND o.[object_id] IS NOT NULL				THEN os.[Name]
+									WHEN ep.[class] = 1 AND ep.[minor_id] = 0						THEN pos.[Name]
+									WHEN ep.[class] = 1 AND ep.[minor_id] <> 0						THEN cpos.[Name]
+									WHEN ep.[class] = 2												THEN prs.[Name]
+									WHEN ep.[class] = 6												THEN ts.[Name]
+									WHEN ep.[class] = 7												THEN ips.[Name]
+									WHEN ep.[class] = 8												THEN tts.[Name]
+									WHEN ep.[class] = 10											THEN xs.[Name]
+									WHEN ep.[class] = 22											THEN dfg.[Name] /* I know it's still not a schema */
+									ELSE NULL
+								  END
+		,ParentName				= CASE
+									WHEN ep.[class] = 1 AND ep.[minor_id] = 0						THEN po.[Name]
+									WHEN ep.[class] = 1 AND ep.[minor_id] <> 0						THEN cpo.[Name]
+									WHEN ep.[class] = 2												THEN pro.[Name]
+									WHEN ep.[class] = 7												THEN ipo.[Name]
+									ELSE NULL
+								 END
+		,ObjectName				= CASE 
+									WHEN ep.[class] = 0												THEN DB_NAME()
+									WHEN (ep.[class] = 1 
+										 AND ep.[minor_id] = 0 
+										 AND o.[object_id] IS NULL)									THEN en.[Name] /* Ridiculous edge case for Event Notifications */
+									WHEN ep.[class] = 1	AND ep.[minor_id] = 0						THEN o.[Name]
+									WHEN ep.[class] = 1	AND ep.[minor_id] <> 0						THEN c.[Name]
+									WHEN ep.[class] = 2												THEN pr.[Name]
+									WHEN ep.[class] = 3												THEN sch.[Name]
+									WHEN ep.[class] = 4												THEN dp.[Name]
+									WHEN ep.[class] = 5												THEN a.[Name]
+									WHEN ep.[class] = 6												THEN t.[Name]
+									WHEN ep.[class] = 7												THEN i.[Name]
+									WHEN ep.[class] = 8												THEN tc.[Name]
+									WHEN ep.[class] = 10											THEN x.[Name]
+									WHEN ep.[class] = 15 											THEN smt.[Name] 
+									WHEN ep.[class] = 16											THEN sc.[Name]
+									WHEN ep.[class] = 17											THEN s.[Name]
+									WHEN ep.[class] = 18											THEN rsb.[Name]
+									WHEN ep.[class] = 19											THEN r.[Name]
+									WHEN ep.[class] = 20											THEN fg.[Name]
+									WHEN ep.[class] = 21											THEN pf.[Name]
+									WHEN ep.[class] = 22											THEN df.[Name]
+									WHEN ep.[class] = 27											THEN pg.[Name]
+									ELSE NULL
+								 END COLLATE DATABASE_DEFAULT /* Need COLLATE or else this throws errors */
+		,PropertyName			= ep.[name]
+		,PropertyValue			= ep.[Value]
+/*		,Class					= ep.[class] */
+/*		,Class_Desc				= ep.[class_desc] */
+		,PrimaryKeyColumn		= CASE
+									WHEN ep.[class] = 0												THEN 'sys.databases.database_id'
+									WHEN (ep.[class] = 1 
+										 AND ep.[minor_id] = 0 
+										 AND o.[object_id] IS NULL)									THEN 'sys.event_notifications.object_id' /* Event Notifications again */
+									WHEN ep.[class] = 1	AND ep.[minor_id] = 0						THEN 'sys.objects.object_id'
+									WHEN ep.[class] = 1	AND ep.[minor_id] <> 0						THEN 'sys.columns.object_id'
+									WHEN ep.[class] = 2												THEN 'sys.parameters.object_id'
+									WHEN ep.[class] = 3												THEN 'sys.schemas.schema_id'
+									WHEN ep.[class] = 4												THEN 'sys.database_principals.principal_id'
+									WHEN ep.[class] = 5												THEN 'sys.assemblies.assembly_id'
+									WHEN ep.[class] = 6												THEN 'sys.types.user_type_id'
+									WHEN ep.[class] = 7												THEN 'sys.indexes.object_id'
+									WHEN ep.[class] = 8												THEN 'sys.table_types.user_type_id'
+									WHEN ep.[class] = 10											THEN 'sys.xml_schema_collections.xml_collection_id'
+									WHEN ep.[class] = 15 											THEN 'sys.service_message_types.message_type_id'
+									WHEN ep.[class] = 16											THEN 'sys.service_contracts.service_contract_id'
+									WHEN ep.[class] = 17											THEN 'sys.services.service_id'
+									WHEN ep.[class] = 18											THEN 'sys.remote_service_bindings.remote_service_binding_id'
+									WHEN ep.[class] = 19											THEN 'sys.routes.route_id'
+									WHEN ep.[class] = 20											THEN 'sys.filegroups.data_space_id'
+									WHEN ep.[class] = 21											THEN 'sys.partition_functions.function_id'
+									WHEN ep.[class] = 22											THEN 'sys.database_files.file_id'
+									WHEN ep.[class] = 27											THEN 'sys.plan_guides.plan_guide_id'
+									ELSE NULL
+								 END
+		,PrimaryId			= ep.[major_id]
+		,SecondaryKeyColumn		= CASE
+									WHEN ep.[class] = 1 AND ep.[minor_id] <> 0						THEN 'sys.columns.column_id'
+									WHEN ep.[class] = 2												THEN 'sys.parameters.parameter_id'
+									WHEN ep.[class] = 7												THEN 'sys.indexes.index_id'
+									WHEN ep.[class] = 8												THEN 'sys.columns.column_id'
+									WHEN ep.[minor_id] <> 0											THEN 'FIXME'
+									ELSE NULL
+								 END
+		,SecondaryId		= ep.[minor_id]
 	FROM 
 		sys.extended_properties				ep
 	LEFT JOIN		/* If class is 1, AND minor_id = 0, THEN OBJECT and major_id is object_id */
@@ -304,9 +407,14 @@ AS
 		sys.filegroups						dfg
 		ON df.[data_space_id] = dfg.[data_space_id]
 	WHERE 1=1
-		AND ep.[Name] = @PropertyName
+		AND (@PropertyName IS NULL OR ep.[Name] = @PropertyName);
+
+	SELECT * 
+	FROM #Results
 	ORDER BY 
-		ep.[class], ep.[Value]
+		SchemaName, 
+		ParentName, 
+		ObjectType
 	END /* End Informational Section */
 	ELSE
 	BEGIN /* Processing section */
