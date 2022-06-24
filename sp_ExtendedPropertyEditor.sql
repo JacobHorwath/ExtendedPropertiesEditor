@@ -8,12 +8,13 @@ IF OBJECT_ID('dbo.sp_ExtendedPropertyEditor') IS NULL
 GO
 
 ALTER PROCEDURE [dbo].[sp_ExtendedPropertyEditor]
-    @Help TINYINT = 0,
+    @Help TINYINT					= 0,
+	@ShowExamples TINYINT			= NULL,
 	@PropertyName NVARCHAR(256)		= NULL,
 	@PropertyValue NVARCHAR(MAX)	= NULL,
 	@ObjectType NVARCHAR (256)		= NULL,
 	@ObjectName NVARCHAR(256)		= NULL,
-	@SchemaName NVARCHAR(256)		= 'dbo',
+	@SchemaName NVARCHAR(256)		= NULL,
 	@ParentName NVARCHAR(256)		= NULL
 
 WITH RECOMPILE
@@ -21,6 +22,10 @@ AS
     SET NOCOUNT ON;
 	SET STATISTICS XML OFF;
 	--SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
+
+	DECLARE @crlf NVARCHAR(2);
+
+	SET @crlf = NCHAR(13) + NCHAR(10);
 
 	IF @Help = 1
 	BEGIN
@@ -45,17 +50,32 @@ AS
 	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 	SOFTWARE.
 
-	Instructions:
+	Help:
 	1) Execution with no parameters will show you a list of all extended properties in the current database.
-		- You can use the outputted columns as inputs to this stored procedure. 
-		  The last column contains code to update the data.
-		  Copy > Paste > Modify Value > Execute
-	2) TODO: Finish
+		- You can use the outputted columns as inputs to this stored procedure 
+		- The last column contains code to update the data
+		- Copy > Paste > Modify PropertyValue > Execute
+	2) Run with @ShowExamples = 1 to get examples for each object type. 
+	    - Note: these are not the same object types in the sys.objects table. It is not my design, dont shoot the messenger.
+		- These object types are effectively the same as what you would use in a CREATE statement (which makes more sense than that sys.objects.type mumbo jumbo)
+	3) To Upsert an ExtendedProperty.Value you need:
+		- @PropertyValue, @ObjectType, @ObjectName are required always
+	    - @SchemaName and @ParentName are required sometimes
+	    - @SchemaName defaults to dbo
+		- @PropertyName defaults to MS_Description
+	4) To Read a property for a single object, pass necessary parameters--without @PropertyValue
+		- Remember that passing @PropertyValue will modify the value!
 	*/
 	'
 	END /* End Help section */
-	ELSE IF (@PropertyValue IS NULL OR @ObjectType IS NULL OR @ObjectName IS NULL)
+	/* Probably not necessary but I want this procedure to be simple to use and difficult to make mistakes 
+	   So if these properties are not*/
+	IF (@PropertyValue IS NULL 
+		AND @ObjectType IS NULL 
+		AND @ObjectName IS NULL)
 	BEGIN
+		IF OBJECT_ID('tempdb..#Results') IS NOT NULL
+			DROP TABLE #Results;
 		CREATE TABLE #Results (
 			ObjectType NVARCHAR(256) NOT NULL,
 			ObjectName NVARCHAR(256) NOT NULL,
@@ -417,8 +437,34 @@ AS
 		ObjectType
 	END /* End Informational Section */
 	ELSE
-	BEGIN /* Processing section */
+	BEGIN /* Upsert Processing section */
 	PRINT 'TODO Updates etc.'
+	BEGIN 
+		IF (@ObjectName IS NULL OR @ObjectType IS NULL OR @PropertyValue IS NULL) 
+			--PRINT('The three required parameters are @ObjectName, @ObjectType and @PropertyValue. Use @ShowExamples = 1 to see examples')
+			RAISERROR('The three required parameters are @ObjectName, @ObjectType and @PropertyValue. Use @ShowExamples = 1 to see examples', 16, 1);
+		IF @SchemaName IS NULL /* Defaulting to dbo */
+			SET @SchemaName = 'dbo' 
+		If @PropertyName IS NULL /* Defaulting to MS_Description */
+			SET @PropertyName = 'MS_Description' 
+        IF @ParentName IS NULL /* Assume this is intentional... for now */
+			BEGIN
+			IF NOT EXISTS (
+            SELECT *
+            FROM sys.[fn_listextendedproperty](
+                    @PropertyName,
+                    N'SCHEMA',
+                    @SchemaName,
+                    @ObjectType,
+                    @ObjectName,
+                    NULL,
+                    NULL
+                    )
+			) 
+
+			RAISERROR('The three required parameters are @ObjectName, @ObjectType and @PropertyValue. Use @ShowExamples = 1 to see examples', 16, 1);
+		ELSE 
+			SELECT 1 as present
 	
 --    WHILE @TableName IS NOT NULL 
 
@@ -472,8 +518,8 @@ AS
 --          ORDER BY t.[name] ASC
 --    );
 --    END
+	END
+
 END
 
-RETURN 
-
-
+END
